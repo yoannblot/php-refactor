@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    image: php-refactor
+    working_dir: /app
+    volumes:
+      - .:/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/app/target
+
+volumes:
+  cargo-cache:
+  target-cache:
