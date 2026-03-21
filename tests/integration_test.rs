@@ -7,7 +7,5 @@ fn test_main_output() {
         .expect("Failed to run binary");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("PHP Refactor")
-    );
+    assert!(stdout.contains("PHP Refactor"));
 }
