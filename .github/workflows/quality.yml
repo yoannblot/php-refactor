@@ -1,0 +1,37 @@
+name: quality.yml
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.event.pull_request.number || github.run_id }}-quality
+  cancel-in-progress: true
+
+jobs:
+  quality-tools:
+    name: Run quality tools
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo check
+        run: cargo check --locked
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        run: cargo clippy -- -D warnings
+
+      - name: cargo test
+        run: cargo test --locked
