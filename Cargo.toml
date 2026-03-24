@@ -3,4 +3,17 @@ name = "php-refactor"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "php-refactor"
+path = "src/main.rs"
+
+[lib]
+name = "php_refactor"
+path = "src/lib.rs"
+
 [dependencies]
+libc = "0.2"
+mago-syntax = "1.15.3"
+mago-span = "1.15.3"
+mago-database = "1.15.3"
+bumpalo = "3"
