@@ -12,9 +12,10 @@ docker-build:
 build:
     docker compose run --rm app cargo build
 
-# Build release binary (optimized)
+# Build release binary (optimized, auto-detects OS)
 build-release:
-    docker compose run --rm app cargo build --release
+    cargo build --release
+    bash scripts/rename-binary.sh
 
 # Auto-fix code: format + run tests
 quality-tools:

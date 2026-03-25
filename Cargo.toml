@@ -17,3 +17,6 @@ mago-syntax = "1.15.3"
 mago-span = "1.15.3"
 mago-database = "1.15.3"
 bumpalo = "3"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+walkdir = "2"

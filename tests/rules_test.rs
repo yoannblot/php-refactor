@@ -5,7 +5,7 @@ const SEPARATOR: &str = "\n-----\n";
 
 #[test]
 fn test_all_rules() {
-    let rules = php_refactor::rules::all_rules();
+    let rules = php_refactor::rules::all_source_transforms();
 
     for (rule_path, rule_fn) in rules {
         let fixture_dir = format!("tests/rules/{}", rule_path);
