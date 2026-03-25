@@ -19,10 +19,35 @@ fn main() {
     let mut total_changed = 0;
     let mut total_analyzed = 0;
 
-    for (_, rule_fn) in rules::all_rules() {
-        let result = rule_fn(&path);
+    // Load config once instead of per-rule
+    let config = if path.ends_with(".toml") {
+        php_refactor::config::load(&path).ok()
+    } else {
+        None
+    };
+
+    for (rule_key, rule_fn) in rules::all_rules() {
+        let collect_start = Instant::now();
+        let files =
+            php_refactor::resolver::resolve_for_rule_with_config(&path, rule_key, config.as_ref());
+        let collect_ms = collect_start.elapsed().as_secs_f64() * 1000.0;
+
+        let process_start = Instant::now();
+        let result = rule_fn(&files);
+        let process_ms = process_start.elapsed().as_secs_f64() * 1000.0;
+
+        eprintln!(
+            "[INFO] {}: collected {} in {:.2}ms → matched {}, changed {}, processed in {:.2}ms",
+            rule_key,
+            files.len(),
+            collect_ms,
+            result.files_matched,
+            result.files_changed,
+            process_ms
+        );
+
         total_changed += result.files_changed;
-        total_analyzed = result.files_analyzed;
+        total_analyzed += result.files_analyzed;
     }
 
     let total_elapsed = total_start.elapsed();

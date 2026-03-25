@@ -1,3 +1,3 @@
 <?php
 
-class Unit {}
+final class Unit {}

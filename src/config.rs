@@ -1,13 +1,21 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 
 #[derive(Deserialize)]
 pub struct Config {
     pub source: SourceConfig,
+    #[serde(flatten)]
+    pub rules: HashMap<String, HashMap<String, RuleConfig>>,
 }
 
 #[derive(Deserialize)]
 pub struct SourceConfig {
+    pub paths: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct RuleConfig {
     pub paths: Vec<String>,
 }
 

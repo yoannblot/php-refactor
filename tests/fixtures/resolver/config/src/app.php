@@ -1,3 +1,3 @@
 <?php
 
-class App {}
+final class App {}
