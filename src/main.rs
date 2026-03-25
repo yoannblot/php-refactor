@@ -1,6 +1,4 @@
-use php_refactor::reporter;
 use php_refactor::rules;
-use std::fs;
 use std::process;
 use std::time::Instant;
 
@@ -10,51 +8,61 @@ fn main() {
     let path = match std::env::args().nth(1) {
         Some(p) => p,
         None => {
-            let elapsed = total_start.elapsed();
-            eprintln!("[ERROR] Something went wrong: Usage: php-refactor <path/to/file.php>");
-            reporter::print_timing(&[], elapsed);
+            eprintln!(
+                "[ERROR] Something went wrong: Usage: php-refactor <path/to/file.php|directory|config.toml>"
+            );
+            eprintln!("[INFO] No processing, exiting.");
             process::exit(1);
         }
     };
 
-    let original = match fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(e) => {
-            let elapsed = total_start.elapsed();
-            eprintln!("[ERROR] Something went wrong: {}", e);
-            reporter::print_timing(&[], elapsed);
-            process::exit(1);
-        }
+    let mut total_changed = 0;
+    let mut total_analyzed = 0;
+
+    // Load config once instead of per-rule
+    let config = if path.ends_with(".toml") {
+        php_refactor::config::load(&path).ok()
+    } else {
+        None
     };
 
-    let mut rule_timings: Vec<(&str, std::time::Duration)> = Vec::new();
-    let mut content = original.clone();
+    for (rule_key, rule_fn) in rules::all_rules() {
+        let collect_start = Instant::now();
+        let files =
+            php_refactor::resolver::resolve_for_rule_with_config(&path, rule_key, config.as_ref());
+        let collect_ms = collect_start.elapsed().as_secs_f64() * 1000.0;
 
-    for (rule_name, rule_fn) in rules::all_rules() {
-        let rule_start = Instant::now();
-        let result = rule_fn(&content);
-        rule_timings.push((rule_name, rule_start.elapsed()));
+        let process_start = Instant::now();
+        let result = rule_fn(&files);
+        let process_ms = process_start.elapsed().as_secs_f64() * 1000.0;
 
-        if let Some(new_content) = result {
-            content = new_content;
-        }
+        eprintln!(
+            "[INFO] {}: collected {} in {:.2}ms → matched {}, changed {}, processed in {:.2}ms",
+            rule_key,
+            files.len(),
+            collect_ms,
+            result.files_matched,
+            result.files_changed,
+            process_ms
+        );
+
+        total_changed += result.files_changed;
+        total_analyzed += result.files_analyzed;
     }
 
     let total_elapsed = total_start.elapsed();
 
-    // Separate "needs update?" step — rule logic stays pure
-    let needs_update = content != original;
-
-    if needs_update {
-        if let Err(e) = fs::write(&path, &content) {
-            eprintln!("[ERROR] Something went wrong: {}", e);
-            reporter::print_timing(&rule_timings, total_elapsed);
-            process::exit(1);
-        }
-        println!("[OK] 1 file has been changed, 1 file analyzed.");
+    if total_analyzed == 0 {
+        println!("[OK] No PHP files found, nothing to do.");
     } else {
-        println!("[OK] 1 file analyzed, nothing to do.");
+        println!(
+            "[OK] {} file(s) changed, {} file(s) analyzed.",
+            total_changed, total_analyzed
+        );
     }
 
-    reporter::print_timing(&rule_timings, total_elapsed);
+    eprintln!(
+        "[INFO] {:.2}ms total duration.",
+        total_elapsed.as_secs_f64() * 1000.0
+    );
 }

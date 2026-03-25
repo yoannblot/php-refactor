@@ -32,8 +32,14 @@ docker run --rm -v $(pwd):/workspace php-refactor \
 
 ## Usage
 
+The tool accepts a **single argument**: a file path, directory path, or config file path.
+
+### Single File Mode
+
+Process one PHP file:
+
 ```bash
-php-refactor path/to/file.php
+php-refactor MyClass.php
 ```
 
 **Example:**
@@ -54,7 +60,40 @@ final class MyClass {
 }
 ```
 
-The tool modifies the file in-place. If no rules apply, the file is left unchanged.
+### Directory Mode
+
+Recursively process all PHP files in a directory:
+
+```bash
+php-refactor src/
+php-refactor tests/
+```
+
+### Config File Mode
+
+Process multiple directories defined in a TOML config file:
+
+```bash
+php-refactor config.toml
+```
+
+**config.toml:**
+
+```toml
+[source]
+paths = ["src", "tests", "app"]
+```
+
+Paths can be:
+- Relative to the project root: `"src"`, `"./app"`
+- Absolute: `"/home/user/project/src"`
+- Nested: `"src/components/php"`
+
+The tool will recursively walk each path and apply all rules to every `.php` file found.
+
+---
+
+The tool modifies files in-place. If no rules apply, files are left unchanged.
 
 ### Output
 

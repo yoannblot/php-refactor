@@ -1,0 +1,2 @@
+[source]
+paths = ["tests/fixtures/resolver/config/src", "tests/fixtures/resolver/config/tests"]

@@ -1,0 +1,2 @@
+[source]
+paths = ["src/php-app", "./tests/unit", "../shared"]

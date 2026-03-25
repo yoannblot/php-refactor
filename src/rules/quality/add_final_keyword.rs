@@ -1,57 +1,63 @@
-use bumpalo::Bump;
-use mago_database::file::FileId;
-use mago_syntax::ast::{Modifier, Sequence, Statement};
-use mago_syntax::parser::parse_file_content;
+use rayon::prelude::*;
+use regex::Regex;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-pub fn apply(source: &str) -> Option<String> {
-    let arena = Bump::new();
-    let file_id = FileId::zero();
-    let program = parse_file_content(&arena, file_id, source);
+static RE: LazyLock<Regex> = LazyLock::new(|| {
+    // Matches "class" keyword at the start of a line (after optional whitespace).
+    // Captures: (1) leading whitespace, (2) optional "readonly " modifier.
+    // Naturally excludes: abstract class, final class, interface, trait, enum, ::class, $class, etc.
+    Regex::new(r"(?m)^(\s*)(readonly\s+)?class\s").unwrap()
+});
 
-    let mut insertions: Vec<usize> = Vec::new();
-    collect_insertions(&program.statements, &mut insertions);
+/// File-aware entry point: applies the rule to the given set of files in parallel.
+pub fn apply(files: &[PathBuf]) -> crate::rules::RuleResult {
+    let files_matched = AtomicUsize::new(0);
+    let files_changed = AtomicUsize::new(0);
 
-    if insertions.is_empty() {
+    files.par_iter().for_each(|file_path| {
+        let Ok(original) = fs::read_to_string(file_path) else {
+            return;
+        };
+
+        if let Some(modified) = apply_to_source(&original) {
+            files_matched.fetch_add(1, Ordering::Relaxed);
+            if fs::write(file_path, &modified).is_ok() {
+                files_changed.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+    });
+
+    crate::rules::RuleResult {
+        files_changed: files_changed.load(Ordering::Relaxed),
+        files_matched: files_matched.load(Ordering::Relaxed),
+        files_analyzed: files.len(),
+    }
+}
+
+/// Pure source transformation: used by tests.
+pub fn apply_to_source(source: &str) -> Option<String> {
+    // Early exit: skip expensive regex if source has no class declaration
+    if !source.contains("class ") {
         return None;
     }
 
-    // Apply insertions back-to-front to preserve offsets
-    let mut result = source.to_string();
-    insertions.sort_unstable_by(|a, b| b.cmp(a));
-    for offset in insertions {
-        result.insert_str(offset, "final ");
+    // Check if pattern exists before attempting replacement
+    if !RE.is_match(source) {
+        return None;
     }
 
-    Some(result)
-}
+    let result = RE.replace_all(source, |caps: &regex::Captures| {
+        let indent = &caps[1];
+        let readonly = caps.get(2).map(|m| m.as_str()).unwrap_or("");
+        format!("{}final {}class ", indent, readonly)
+    });
 
-fn collect_insertions<'a>(
-    statements: &'a Sequence<'a, Statement<'a>>,
-    insertions: &mut Vec<usize>,
-) {
-    for stmt in statements {
-        match stmt {
-            Statement::Class(class) => {
-                let mods = &class.modifiers;
-                if mods.contains_final() || mods.contains_abstract() {
-                    continue;
-                }
-                // Insert before `readonly` if present, else before `class` keyword
-                let offset = if mods.contains_readonly() {
-                    match mods.get_readonly() {
-                        Some(Modifier::Readonly(kw)) => kw.span.start.offset as usize,
-                        _ => unreachable!(),
-                    }
-                } else {
-                    class.class.span.start.offset as usize
-                };
-                insertions.push(offset);
-            }
-            Statement::Interface(_) => {} // skip
-            Statement::Namespace(ns) => {
-                collect_insertions(ns.statements(), insertions);
-            }
-            _ => {}
-        }
+    if result == source {
+        None
+    } else {
+        Some(result.into_owned())
     }
 }
