@@ -2,8 +2,41 @@ use bumpalo::Bump;
 use mago_database::file::FileId;
 use mago_syntax::ast::{Modifier, Sequence, Statement};
 use mago_syntax::parser::parse_file_content;
+use std::fs;
 
-pub fn apply(source: &str) -> Option<String> {
+/// File-aware entry point: takes a path and returns stats.
+pub fn apply(path: &str) -> crate::rules::RuleResult {
+    let files = match crate::resolver::collect_php_files(path) {
+        Ok(f) => f,
+        Err(_) => {
+            return crate::rules::RuleResult {
+                files_changed: 0,
+                files_analyzed: 0,
+            };
+        }
+    };
+
+    let mut files_changed = 0;
+    let total_analyzed = files.len();
+
+    for file_path in files {
+        let Ok(original) = fs::read_to_string(&file_path) else {
+            continue;
+        };
+
+        if let Some(modified) = apply_to_source(&original) {
+            files_changed += usize::from(fs::write(&file_path, &modified).is_ok());
+        }
+    }
+
+    crate::rules::RuleResult {
+        files_changed,
+        files_analyzed: total_analyzed,
+    }
+}
+
+/// Pure source transformation: used by tests.
+pub fn apply_to_source(source: &str) -> Option<String> {
     let arena = Bump::new();
     let file_id = FileId::zero();
     let program = parse_file_content(&arena, file_id, source);
