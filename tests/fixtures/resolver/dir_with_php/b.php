@@ -1,3 +1,3 @@
 <?php
 
-class B {}
+final class B {}

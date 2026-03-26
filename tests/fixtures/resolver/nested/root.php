@@ -1,3 +1,3 @@
 <?php
 
-class Root {}
+final class Root {}
