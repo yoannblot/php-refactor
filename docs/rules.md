@@ -87,3 +87,50 @@ Scope the rule via `config.toml` path globs to classes you know are readonly-com
 add_readonly_keyword.paths = ["src/Dto/**/*.php", "src/ValueObject/**/*.php"]
 ```
 
+---
+
+## `quality/remove_redundant_readonly_keyword`
+
+**Summary**: Removes redundant `readonly` from properties and constructor-promoted parameters inside classes already declared `readonly` (PHP 8.2+).
+
+**When to use**: Clean up noise after class-level `readonly` is adopted — the class modifier already makes every instance property readonly, so per-property `readonly` is redundant.
+
+**What it does:**
+- Detects classes whose modifier list contains `readonly` in any order (`readonly class`, `final readonly class`, `readonly final class`, `abstract readonly class`)
+- Inside each matching class body, strips the `readonly` keyword from lines that start with a visibility modifier (`public`, `protected`, `private`), optionally followed by `static`
+- Applies to both regular property declarations and constructor-promoted parameters (they share the same syntactic shape)
+- Uses brace counting to scope edits strictly to the class body
+
+**What it skips:**
+- Bare classes (`class Foo { private readonly Bar $x; }`) — here `readonly` is load-bearing and must NOT be stripped
+- Classes already free of redundant `readonly` (idempotent)
+- Interfaces, traits, enums (cannot be `readonly` in PHP)
+
+**Example:**
+
+```php
+// Before
+final readonly class ActivityDashboardFactory
+{
+    private readonly TeamRepository $teamRepository;
+
+    public function __construct(
+        private readonly PeriodFactory $periodFactory,
+    ) {}
+}
+
+// After
+final readonly class ActivityDashboardFactory
+{
+    private TeamRepository $teamRepository;
+
+    public function __construct(
+        private PeriodFactory $periodFactory,
+    ) {}
+}
+```
+
+**Known limitations (syntactic rule — no string/comment awareness):**
+
+The brace counter used to scope the class body is naive: raw `{` or `}` bytes inside string literals, heredocs, or comments can skew the scan. Scope via `config.toml` path globs to code you trust.
+

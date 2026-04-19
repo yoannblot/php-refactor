@@ -1,9 +1,9 @@
 ---
 name: add-new-rule
 description: |
-  Step-by-step guide to implement a new transformation rule: create module, register in hierarchy, add test fixtures, write implementation.
+  Step-by-step guide to implement a new PHP transformation rule in this project: scaffold the rule module, register in the module hierarchy, add test fixtures, update documentation. Use when the user asks to "add a rule", "add a new rule", "create a rule", "implement a transformation", or invokes /add-new-rule.
 user-invocable: true
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 
 # Adding a New Rule
@@ -149,6 +149,18 @@ Test explicitly: write a fixture, run your rule on its output, verify it returns
 
 ---
 
+## 5. Update Documentation
+
+After the rule passes tests, update these three documentation surfaces so the new rule is discoverable:
+
+- **`docs/rules.md`** — user-facing reference. Add a new `## quality/<rule_name>` section with Summary, When to use, What it does, What it skips, Example (before/after PHP), and Known limitations.
+- **`README.md`** — one-line row in the "Available Rules" table.
+- **`.claude/rules/architecture.md`** — agent-facing implementation notes under "Current Rules". Describe the regex/AST approach, skip conditions, and known limitations.
+
+Each doc has a distinct audience — do not collapse them into one.
+
+---
+
 ## Example: Full Skeleton
 
 ```rust
@@ -194,3 +206,6 @@ pub fn apply(source: &str) -> Option<String> {
 - [ ] Tests pass: `just tests` or `cargo test`
 - [ ] Rule is idempotent (applying twice = applying once)
 - [ ] No panics on malformed input
+- [ ] `docs/rules.md` updated with a user-facing section
+- [ ] `README.md` rules table updated
+- [ ] `.claude/rules/architecture.md` updated with implementation notes

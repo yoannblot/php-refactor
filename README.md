@@ -112,6 +112,7 @@ The tool prints a summary:
 |------|-------------|
 | `quality/add_final_keyword` | Adds `final` keyword to concrete classes |
 | `quality/add_readonly_keyword` | Adds `readonly` keyword to bare concrete classes |
+| `quality/remove_redundant_readonly_keyword` | Removes redundant `readonly` from properties and promoted params inside `readonly` classes |
 
 See [docs/rules.md](docs/rules.md) for detailed rule documentation.
 
