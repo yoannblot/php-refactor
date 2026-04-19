@@ -83,7 +83,8 @@ src/
       ├── mod.rs       # Rule registry (all_rules, all_source_transforms)
       └── quality/     # Quality rules by category
           ├── mod.rs
-          └── add_final_keyword.rs  # Example rule (adds final to classes)
+          ├── add_final_keyword.rs      # Adds `final` to concrete classes
+          └── add_readonly_keyword.rs   # Adds `readonly` to bare classes (PHP 8.2+)
 
 tests/
   ├── *_test.rs           # Individual unit tests

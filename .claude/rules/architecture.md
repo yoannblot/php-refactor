@@ -45,18 +45,35 @@ paths:
 **What it does**: Adds `final` keyword to non-abstract, non-final PHP classes (prevents accidental subclassing)
 
 **Behavior**:
-- Parses PHP source into AST
-- Walks all class declarations and classes within namespaces
-- For each class: if it has no `final` or `abstract` modifiers, inserts `final ` before the `class` keyword
-- If class is `readonly`, inserts before `readonly` to produce `final readonly class Foo {}`
-- Applies insertions back-to-front to avoid offset shifting
+- Uses a single line-anchored regex to find bare `class` and `readonly class` declarations
+- Captures leading whitespace (indentation) and optional `readonly ` modifier, then prepends `final `
+- Produces `final readonly class Foo {}` when the class was `readonly`
 - Returns `None` if no changes; returns `Some(modified_source)` if changed
 
 **Skips**:
-- Abstract classes
+- Abstract classes (regex doesn't anchor on `abstract`)
 - Classes that already have `final`
 - Interfaces and traits (no `final` modifier)
 - Enums (PHP enums cannot be marked `final`)
+
+---
+
+### `src/rules/quality/add_readonly_keyword.rs`
+
+**What it does**: Adds `readonly` keyword to bare concrete PHP classes (forces all instance properties to be readonly; PHP 8.2+)
+
+**Behavior**:
+- Uses a single line-anchored regex (`(?m)^(\s*)class\s`) to find bare `class` declarations
+- Captures leading whitespace (indentation), then prepends `readonly `
+- Scope is **bare classes only** — does not touch `final class` or `abstract class`
+
+**Skips**:
+- Classes already marked `readonly` (regex doesn't match `readonly class`)
+- `final class` and `abstract class` (out of scope — regex doesn't anchor on modifiers)
+- Interfaces, traits, enums (regex requires literal `class` token)
+- `::class`, `$class`, and expression-level class references
+
+**Known limitations**: Syntactic rule only; does not inspect class bodies. Applying to classes with static/untyped properties, default values, dynamic properties, or non-readonly parents produces PHP fatal errors at runtime. Scope via `config.toml` path globs.
 
 ---
 

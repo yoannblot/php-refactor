@@ -111,6 +111,7 @@ The tool prints a summary:
 | Rule | What It Does |
 |------|-------------|
 | `quality/add_final_keyword` | Adds `final` keyword to concrete classes |
+| `quality/add_readonly_keyword` | Adds `readonly` keyword to bare concrete classes |
 
 See [docs/rules.md](docs/rules.md) for detailed rule documentation.
 
