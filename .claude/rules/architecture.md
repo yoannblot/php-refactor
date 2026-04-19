@@ -77,6 +77,26 @@ paths:
 
 ---
 
+### `src/rules/quality/remove_redundant_readonly_keyword.rs`
+
+**What it does**: Removes redundant `readonly` keywords from property declarations and constructor-promoted parameters inside classes already declared `readonly` (PHP 8.2+).
+
+**Behavior**:
+- Uses a line-anchored regex (`HEADER_RE`) to find class declarations whose modifier list contains `readonly` in any order (`readonly`, `final readonly`, `readonly final`, `abstract readonly`, etc.). Capture group 1 is the full modifier string; the rule rejects matches whose modifier list does not contain the literal word `readonly`.
+- For each matching header, scans the source bytes to find the matching `}` via `find_matching_brace` (naive depth counter).
+- Within each `(body_start, body_end)` range, applies `STRIP_RE` to remove `readonly` from lines that start with a visibility modifier (`public` / `protected` / `private`), optionally followed by `static`. The same regex handles both property declarations and constructor-promoted parameters (identical syntactic shape).
+- Applies replacements back-to-front (ranges reverse-sorted by `start`) so byte offsets of earlier ranges stay valid.
+- Returns `None` if no ranges produced changes (idempotent on re-run).
+
+**Skips**:
+- Bare `class Foo` declarations — `readonly` on their properties is load-bearing and must not be stripped
+- Classes already free of redundant `readonly`
+- Interfaces, traits, enums (cannot be `readonly` in PHP)
+
+**Known limitations**: The brace counter is string/heredoc/comment-unaware. A `{` or `}` byte inside a string literal inside the class body can skew the scan. Documented as a syntactic limitation in the module header.
+
+---
+
 ## Quality Issues (High Priority)
 
 See `/code-quality-issues` skill for the full H1–H3 blockers, M1–M7 medium-priority, and L1–L6 low-priority list.
